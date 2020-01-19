@@ -15,6 +15,9 @@ learning_rate = 0.001
 training_epochs = 15
 batch_size = 100
 
+# path of model saved which was completed of deep learning CNN
+mytrain = "/Users/lhs/PycharmProjects/PythonTensorExam/exam_11/result_training/model"
+
 class Model:
 
     def __init__(self, sess, name):
@@ -85,7 +88,7 @@ class Model:
 # initialize
 sess = tf.Session()
 m1 = Model(sess, "m1")
-
+saver = tf.train.Saver(max_to_keep=1) # for save the result of deep learning CNN
 sess.run(tf.global_variables_initializer())
 
 print("Learning Start")
@@ -106,3 +109,6 @@ print("Learning Finished")
 
 # Test model and check accuracy
 print('Accuracy:', m1.get_accuracy(mnist.test.images, mnist.test.labels))
+
+# save the result of cnn
+saver.save(sess, mytrain)
