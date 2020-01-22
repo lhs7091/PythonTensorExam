@@ -1,114 +1,109 @@
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
+import os
 import random
 import matplotlib.pyplot as plt
 
-config = tf.ConfigProto(intra_op_parallelism_threads=4,
-                        inter_op_parallelism_threads=4,
-                        allow_soft_placement=True,
-                        device_count = {'CPU': 4})
-
+# MNIST dowload
+from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets("/Users/lhs/PycharmProjects/PythonTensorExam/exam_11/mist_data", one_hot=True)
 
-# parameters
+# initial parameter
 learning_rate = 0.001
 training_epochs = 15
 batch_size = 100
+keep_prob = 0.7
 
-# path of model saved which was completed of deep learning CNN
-mytrain = "/Users/lhs/PycharmProjects/PythonTensorExam/exam_11/result_training/model"
 
-class Model:
+# define CNN Model
+def build_CNN_classifier(x_data):
+    x_image = tf.reshape(x_data, [-1, 28, 28, 1])
 
-    def __init__(self, sess, name):
-        self.sess = sess
-        self.name = name
-        self.__build_net()
+    # L1 image shape=(?, 28, 28, 1)
+    W1 = tf.Variable(tf.random_normal([3, 3, 1, 32], stddev=0.01))
+    L1 = tf.nn.conv2d(x_image, W1, strides=[1, 1, 1, 1], padding='SAME')
+    L1 = tf.nn.relu(L1)
+    L1 = tf.nn.max_pool(L1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    L1 = tf.nn.dropout(L1, keep_prob=keep_prob)
 
-    def __build_net(self):
-        with tf.variable_scope(self.name):
-            # dropout rate = 0.5 ~ 0.7 on training
-            # but for testing, it should be 1
-            self.keep_prob = tf.placeholder(tf.float32)
+    # L2 image shape=(?, 14, 14, 32)
+    W2 = tf.Variable(tf.random_normal([3, 3, 32, 64], stddev=0.01))
+    L2 = tf.nn.conv2d(L1, W2, strides=[1, 1, 1, 1], padding='SAME')
+    L2 = tf.nn.relu(L2)
+    L2 = tf.nn.max_pool(L2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    L2 = tf.nn.dropout(L2, keep_prob=keep_prob)
 
-            # input place holders
-            self.X = tf.placeholder(tf.float32, [None, 784])
-            x_image = tf.reshape(self.X, [-1, 28, 28, 1])
-            self.Y = tf.placeholder(tf.float32, [None, 10])
+    # L3 image shape=(?, 7, 7, 64)
+    W3 = tf.Variable(tf.random_normal([3, 3, 64, 128], stddev=0.01))
+    L3 = tf.nn.conv2d(L2, W3, strides=[1, 1, 1, 1], padding='SAME')
+    L3 = tf.nn.relu(L3)
+    L3 = tf.nn.max_pool(L3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+    L3 = tf.nn.dropout(L3, keep_prob=keep_prob)
+    L3_flat = tf.reshape(L3, [-1, 128 * 4 * 4])
 
-            # L1 image shape=(?, 28, 28, 1)
-            W1 = tf.Variable(tf.random_normal([3,3,1,32], stddev=0.01))
-            L1 = tf.nn.conv2d(x_image, W1, strides=[1,1,1,1], padding='SAME')
-            L1 = tf.nn.relu(L1)
-            L1 = tf.nn.max_pool(L1, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
-            L1 = tf.nn.dropout(L1, keep_prob=self.keep_prob)
+    # L4 FC 4*4*128 inputs -> 625 outputs
+    W4 = tf.get_variable("W4", shape=[128 * 4 * 4, 625], initializer=tf.contrib.layers.xavier_initializer())
+    b4 = tf.Variable(tf.random_normal([625]))
+    L4 = tf.nn.relu(tf.matmul(L3_flat, W4) + b4)
+    L4 = tf.nn.dropout(L4, keep_prob=keep_prob)
 
-            # L2 image shape=(?, 14, 14, 32)
-            W2 = tf.Variable(tf.random_normal([3,3,32,64], stddev=0.01))
-            L2 = tf.nn.conv2d(L1, W2, strides=[1,1,1,1], padding='SAME')
-            L2 = tf.nn.relu(L2)
-            L2 = tf.nn.max_pool(L2, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
-            L2 = tf.nn.dropout(L2, keep_prob=self.keep_prob)
+    # L5 Final FC 625 inputs -> 10
+    W5 = tf.get_variable("W5", shape=[625, 10], initializer=tf.contrib.layers.xavier_initializer())
+    b5 = tf.Variable(tf.random_normal([10]))
+    logits = tf.matmul(L4, W5) + b5
+    y_pred = tf.nn.softmax(logits)
 
-            # L3 image shape=(?, 7, 7, 64)
-            W3 = tf.Variable(tf.random_normal([3,3,64,128], stddev=0.01))
-            L3 = tf.nn.conv2d(L2, W3, strides=[1,1,1,1], padding='SAME')
-            L3 = tf.nn.relu(L3)
-            L3 = tf.nn.max_pool(L3, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
-            L3 = tf.nn.dropout(L3, keep_prob=self.keep_prob)
-            L3_flat = tf.reshape(L3, [-1, 128*4*4])
+    return y_pred, logits
 
-            # L4 FC 4*4*128 inputs -> 625 outputs
-            W4 = tf.get_variable("W4", shape=[128*4*4, 625], initializer=tf.contrib.layers.xavier_initializer())
-            b4 = tf.Variable(tf.random_normal([625]))
-            L4 = tf.nn.relu(tf.matmul(L3_flat, W4)+b4)
-            L4 = tf.nn.dropout(L4, keep_prob=self.keep_prob)
 
-            # L5 Final FC 625 inputs -> 10
-            W5 = tf.get_variable("W5", shape=[625, 10], initializer=tf.contrib.layers.xavier_initializer())
-            b5 = tf.Variable(tf.random_normal([10]))
-            self.logits = tf.matmul(L4, W5)+b5
+# define input, output variables by placehoder
+x = tf.placeholder(tf.float32, shape=[None, 784])
+y = tf.placeholder(tf.float32, shape=[None, 10])
 
-        # define cost/loss & optimizer
-        self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.Y))
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.cost)
+# define Convolutional Neural Networks(CNN)
+y_pred, logits = build_CNN_classifier(x)
 
-        correct_prediction = tf.equal(tf.argmax(self.logits, 1), tf.argmax(self.Y, 1))
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+# cost/loss and optimizer
+loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=logits))
+train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
 
-    def predict(self, x_test, keep_prob=1.0):
-        return self.sess.run(self.logits, feed_dict={self.X:x_test, self.keep_prob: keep_prob})
+# caculate accuracy
+correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    def get_accuracy(self, x_test, y_test, keep_prob=1.0):
-        return self.sess.run(self.accuracy, feed_dict={self.X:x_test, self.Y:y_test, self.keep_prob: keep_prob})
+# save model and parameters by tf.train.Saver
+SAVER_DIR = "/Users/lhs/PycharmProjects/PythonTensorExam/exam_11/result_training/model"
+saver = tf.train.Saver()
+checkpoint_path = os.path.join(SAVER_DIR, "model")
+ckpt = tf.train.get_checkpoint_state(SAVER_DIR)
 
-    def train(self, x_data, y_data, keep_prob=0.7):
-        return self.sess.run([self.cost, self.optimizer], feed_dict={self.X:x_data, self.Y:y_data, self.keep_prob: keep_prob})
+# training data
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    # if there are data saved, restore the data first
+    # else, start to training
+    if ckpt and ckpt.model_checkpoint_path:
+        saver.restore(sess, ckpt.model_checkpoint_path)
+        print("Load of test set")
 
-# initialize
-sess = tf.Session()
-m1 = Model(sess, "m1")
-saver = tf.train.Saver(max_to_keep=1) # for save the result of deep learning CNN
-sess.run(tf.global_variables_initializer())
+    else:
+        for epoch in range(training_epochs):
+            avg_cost = 0
+            total_batch = int(mnist.train.num_examples/batch_size)
+            for step in range(total_batch):
+                batch_xs, batch_ys = mnist.train.next_batch(batch_size)
+                c, _ = sess.run([loss, train_step], feed_dict={x: batch_xs, y: batch_ys})
+                train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y: batch_ys})
+                avg_cost += c / total_batch
+                saver.save(sess, checkpoint_path, global_step=step)
 
-print("Learning Start")
+            print("Epoch:", "%04d" % (epoch + 1), "cost=", "{:.9f}".format(avg_cost))
 
-# train my model
-for epoch in range(training_epochs):
-    avg_cost = 0
-    total_batch = int(mnist.train.num_examples/batch_size)
+    # test the model using tet sets
+    print("Accuracy : ", accuracy.eval(session=sess, feed_dict={x: mnist.test.images, y: mnist.test.labels}), )
 
-    for i in range(total_batch):
-        batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-        c, _ = m1.train(batch_xs, batch_ys)
-        avg_cost += c/total_batch
-
-    print("Epoch: ", "%04d" % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
-
-print("Learning Finished")
-
-# Test model and check accuracy
-print('Accuracy:', m1.get_accuracy(mnist.test.images, mnist.test.labels))
-
-# save the result of cnn
-saver.save(sess, mytrain)
+    # Get one and predict
+    r = random.randint(0, mnist.test.num_examples - 1)
+    print("Label: ", sess.run(tf.argmax(mnist.test.labels[r:r + 1], 1)))
+    print("Prediction: ", sess.run(tf.argmax(y_pred.eval(feed_dict={x: mnist.test.images[r:r + 1]}),1)))
+    plt.imshow(mnist.test.images[r:r + 1].reshape(28, 28), cmap="Greys", interpolation="nearest", )
+    plt.show()

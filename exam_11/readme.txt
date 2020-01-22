@@ -39,3 +39,7 @@ Max Pooling : select the maximum number of one layer picked up
 
 fully connected layer(FC) : Contains neurons that connect to the entire input volume, as in ordinary Neural Network
                             Collection of conv, ReLU, Pool
+
+reference
+https://hyongdoc.tistory.com/338
+https://spikez.tistory.com/338
