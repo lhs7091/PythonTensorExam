@@ -1,6 +1,6 @@
-<b> RNN Application</n>
+## RNN Application
 
-Recurrent Neural Network</n>
+Recurrent Neural Network.
     We can precess a sequence of vectors x by applying a recurrence</n>
     formula at every time step:</n>
     ht = fw(ht-1, xt)</n>
