@@ -5,13 +5,16 @@ import matplotlib.pyplot as plt
 
 # MNIST dowload
 from tensorflow.examples.tutorials.mnist import input_data
+
+tf.set_random_seed(777)
+
 mnist = input_data.read_data_sets("/Users/lhs/PycharmProjects/PythonTensorExam/exam_11/mist_data", one_hot=True)
 
 # initial parameter
 learning_rate = 0.001
-training_epochs = 15
+training_epochs = 1
 batch_size = 100
-keep_prob = 0.7
+keep_prob = tf.placeholder(dtype=tf.float32)
 
 
 # define CNN Model
@@ -64,7 +67,7 @@ y_pred, logits = build_CNN_classifier(x)
 
 # cost/loss and optimizer
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=logits))
-train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
+train_step = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 
 # caculate accuracy
 correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y, 1))
@@ -91,19 +94,19 @@ with tf.Session() as sess:
             total_batch = int(mnist.train.num_examples/batch_size)
             for step in range(total_batch):
                 batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-                c, _ = sess.run([loss, train_step], feed_dict={x: batch_xs, y: batch_ys})
-                train_accuracy = accuracy.eval(feed_dict={x: batch_xs, y: batch_ys})
+                c, _ = sess.run([loss, train_step], feed_dict={X: batch_xs, Y: batch_ys, keep_prob: 0.7})
+                train_accuracy = accuracy.eval(feed_dict={X: batch_xs, Y: batch_ys, keep_prob: 0.7})
                 avg_cost += c / total_batch
                 saver.save(sess, checkpoint_path, global_step=step)
 
             print("Epoch:", "%04d" % (epoch + 1), "cost=", "{:.9f}".format(avg_cost))
 
     # test the model using tet sets
-    print("Accuracy : ", accuracy.eval(session=sess, feed_dict={x: mnist.test.images, y: mnist.test.labels}), )
+    print("Accuracy : ", accuracy.eval(session=sess, feed_dict={x: mnist.test.images, y: mnist.test.labels, keep_prob: 1}), )
 
     # Get one and predict
     r = random.randint(0, mnist.test.num_examples - 1)
     print("Label: ", sess.run(tf.argmax(mnist.test.labels[r:r + 1], 1)))
-    print("Prediction: ", sess.run(tf.argmax(y_pred.eval(feed_dict={x: mnist.test.images[r:r + 1]}),1)))
+    print("Prediction: ", sess.run(tf.argmax(y_pred.eval(feed_dict={x: mnist.test.images[r:r + 1], keep_prob: 1}),1)))
     plt.imshow(mnist.test.images[r:r + 1].reshape(28, 28), cmap="Greys", interpolation="nearest", )
     plt.show()
