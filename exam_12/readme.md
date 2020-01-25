@@ -1,6 +1,6 @@
 ## RNN Application
 
-###Recurrent Neural Network.
+Recurrent Neural Network.
 *****
     We can precess a sequence of vectors x by applying a recurrence
     formula at every time step:
@@ -15,7 +15,7 @@
        ↑
     xt(1,5,4) : (batch_size, sequence_length, input_dimension)
 
-###for Example
+for Example
 *****
     Language Modeling
     Speech Recognition
