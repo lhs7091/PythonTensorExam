@@ -1,6 +1,8 @@
+"excute on command line (python 'filename.py')"
 import gym
 from gym.envs.registration import register
 import sys, tty, termios
+
 
 class _Getch:
 
