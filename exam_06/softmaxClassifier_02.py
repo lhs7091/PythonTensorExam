@@ -54,6 +54,7 @@ with tf.Session() as sess:
 
     # test
     test_data = np.array([[5]])
+    print(test_data.shape)
     pred = sess.run(prediction, feed_dict={X:[[0,0,1,0,1,0,0,0,0,1,0,0,0,0,0,1]], Y: test_data})
     # y_data: (N,1) = flatten => (N, ) matches pred.shape
     for p, y in zip (pred, test_data.flatten()):
