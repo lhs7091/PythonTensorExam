@@ -14,7 +14,7 @@ df = pd.read_csv('./data/eighthr.data', names=label)
 df = df.apply(pd.to_numeric, errors='coerce')
 
 # remove nan values
-df.dropna(inplcea=True)
+df.dropna(inplace=True)
 
 Y = df['feat.72']
 Y = to_categorical(Y)
